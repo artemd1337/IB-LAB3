@@ -1,0 +1,9 @@
+{
+    "initial_file": "63.txt",
+    "encrypted_file": "encrypted_file.txt",
+    "decrypted_file": "decrypted.txt",
+    "symmetric_key": "symmetric.txt",
+    "public_key": "public_key.pem",
+    "secret_key": "private_key.pem",
+    "encrypted_path" : "encrypted_file.txt"
+}
