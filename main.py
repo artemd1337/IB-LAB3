@@ -56,7 +56,7 @@ def encryption(file_to_encrypt: str, path_to_private: str, path_to_symmetric: st
     with open(file_to_encrypt, 'r', encoding='utf-8') as file_to_crypt:
         text = file_to_crypt.read()
     padder = text_padding.ANSIX923(128).padder()
-    text = bytes(text, 'UTF-8')
+    text = bytes(text, 'utf-8')
     padded_text = padder.update(text) + padder.finalize()
     iv = os.urandom(16)
     cipher = Cipher(algorithms.SEED(symmetric_key), modes.CBC(iv))
@@ -67,6 +67,21 @@ def encryption(file_to_encrypt: str, path_to_private: str, path_to_symmetric: st
         pickle.dump(data, enc_file)
 
 
+def decryption(path_to_enc_file: str, path_to_private: str, path_to_symmetric: str, path_to_dec_file: str) -> None:
+    symmetric_key = decrypt_symmetric_key(path_to_symmetric, path_to_private)
+    with open(path_to_enc_file, 'rb') as enc_file:
+        data = pickle.load(enc_file)
+    iv = data['iv']
+    ciphertext = data['enc_text']
+    cipher = Cipher(algorithms.SEED(symmetric_key), modes.CBC(iv))
+    decrypt = cipher.decryptor()
+    dec_text = decrypt.update(ciphertext) + decrypt.finalize()
+    unpadder = text_padding.ANSIX923(128).unpadder()
+    unpadded_dec_text = unpadder.update(dec_text) + unpadder.finalize()
+    with open(path_to_dec_file, 'w') as dec_file:
+        dec_file.write(str(unpadded_dec_text.decode("utf-8")))
+
 
 key_generation('', '', '')
 encryption('file_to_encode.txt', 'private_key.pem', 'symmetric', 'encrypted_text.txt')
+decryption('encrypted_text.txt', 'private_key.pem', 'symmetric', 'decoded_text.txt ')
