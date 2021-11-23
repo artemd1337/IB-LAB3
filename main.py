@@ -1,11 +1,13 @@
 import argparse
 import json
+import pickle
 import os
 from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives.ciphers import algorithms
+from cryptography.hazmat.primitives.ciphers import algorithms, Cipher, modes
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import padding as text_padding
 
 settings = {
     'initial_file': '',
@@ -43,7 +45,7 @@ def decrypt_symmetric_key(path_to_symmetric: str, path_to_private) -> bytes:
     with open(path_to_symmetric, 'rb') as symmetric_file:
         enc_symmetric = symmetric_file.read()
     with open(path_to_private, 'rb') as private_file:
-        private_key = serialization.load_pem_private_key(path_to_private.read(), password=None)
+        private_key = serialization.load_pem_private_key(private_file.read(), password=None)
     symmetric_key = private_key.decrypt(enc_symmetric, padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()),
                                                                     algorithm=hashes.SHA256(), label=None))
     return symmetric_key
@@ -53,7 +55,18 @@ def encryption(file_to_encrypt: str, path_to_private: str, path_to_symmetric: st
     symmetric_key = decrypt_symmetric_key(path_to_symmetric, path_to_private)
     with open(file_to_encrypt, 'r', encoding='utf-8') as file_to_crypt:
         text = file_to_crypt.read()
-    
+    padder = text_padding.ANSIX923(128).padder()
+    text = bytes(text, 'UTF-8')
+    padded_text = padder.update(text) + padder.finalize()
+    iv = os.urandom(16)
+    cipher = Cipher(algorithms.SEED(symmetric_key), modes.CBC(iv))
+    encryptor = cipher.encryptor()
+    enc_text = encryptor.update(padded_text) + encryptor.finalize()
+    data = {'enc_text': enc_text, 'iv': iv}
+    with open(path_to_encrypted_file, 'wb') as enc_file:
+        pickle.dump(data, enc_file)
+
 
 
 key_generation('', '', '')
+encryption('file_to_encode.txt', 'private_key.pem', 'symmetric', 'encrypted_text.txt')
